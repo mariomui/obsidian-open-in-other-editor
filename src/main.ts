@@ -143,7 +143,6 @@ export default class OpenFilePlg extends Plugin {
 			path: { join },
 		} = this.app.vault.adapter as AdapterPlus;
 		const derived_path = join(basePath, curFilePath);
-		console.log({ derived_path });
 		void (async function (
 			file: string,
 			app: App & {
