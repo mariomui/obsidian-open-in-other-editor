@@ -70,8 +70,8 @@ export default class OpenFilePlg extends Plugin {
 		await this.doSaveSettingConfig();
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, abstractFile, source) => {
+				menu.addSeparator();
 				menu.addItem((mi) => {
-					console.log(this.settingConfig);
 					mi.setTitle("Open in other editor").onClick(
 						clickHandler.bind(this)
 					);
@@ -80,6 +80,7 @@ export default class OpenFilePlg extends Plugin {
 					if (this.settingConfig.vscode_path)
 						this.open("code", { curFilePath: abstractFile.path });
 				}
+				menu.addSeparator();
 			})
 		);
 

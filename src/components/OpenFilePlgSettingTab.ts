@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import OpenFilePlg from "../main";
 
 export class OpenFilePlgSettingTab extends PluginSettingTab {
@@ -11,20 +11,15 @@ export class OpenFilePlgSettingTab extends PluginSettingTab {
 		let { containerEl } = this;
 
 		containerEl.empty();
+		const checkSettingConfigTap = createTap<Setting>();
 
 		new Setting(containerEl)
 			.setName("path to vscode ")
 			.setDesc("absolute")
+			// .then(checkSettingConfigTap.bind(this))
 			.addText((text) =>
 				text
-					.setPlaceholder("hrm")
-					.then((component) => {
-						console.log({
-							component,
-							config: this.plugin.settingConfig,
-						});
-						return component;
-					})
+					.setPlaceholder(`'which code'`)
 					.setValue(this.plugin.settingConfig.vscode_path)
 					.onChange(async (value) => {
 						this.plugin.settingConfig.vscode_path = value;
@@ -32,4 +27,11 @@ export class OpenFilePlgSettingTab extends PluginSettingTab {
 					})
 			);
 	}
+}
+
+function createTap<T>() {
+	return function (component: T) {
+		new Notice(JSON.stringify(this.plugin.settingConfig));
+		return this;
+	};
 }
