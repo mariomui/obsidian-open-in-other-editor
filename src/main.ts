@@ -77,13 +77,8 @@ export default class OpenFilePlg extends Plugin {
 					);
 				});
 				function clickHandler() {
-					const { basePath } = this.app.vault.adapter as AdapterPlus;
 					if (this.settingConfig.vscode_path)
-						this.macopen(
-							basePath,
-							abstractFile.path,
-							this.settingConfig.vscode_path
-						);
+						this.open("code", { curFilePath: abstractFile.path });
 				}
 			})
 		);
@@ -108,8 +103,16 @@ export default class OpenFilePlg extends Plugin {
 
 	onunload() {}
 
-	private open(by: EditorName) {
-		let curFilePath = this.app.workspace.getActiveFile()?.path;
+	private open(
+		by: EditorName,
+		overrideConfig?: {
+			curFilePath?: string;
+		}
+	) {
+		const { curFilePath } = {
+			curFilePath: this.app.workspace.getActiveFile()?.path,
+			...overrideConfig,
+		};
 		if (!curFilePath) {
 			console.warn("no active file in workspace");
 			return;
