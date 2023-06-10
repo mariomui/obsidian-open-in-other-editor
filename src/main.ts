@@ -1,6 +1,14 @@
-import { DataAdapter, Plugin, Notice, App, Vault } from "obsidian";
+import {
+	DataAdapter,
+	Plugin,
+	Notice,
+	App,
+	Vault,
+	MenuItem,
+	Menu,
+} from "obsidian";
 import * as os from "os";
-import { spawn, exec } from "child_process";
+import { spawn } from "child_process";
 import { OpenFilePlgSettingTab } from "./components/OpenFilePlgSettingTab";
 
 type EditorName = "gvim" | "code";
@@ -68,9 +76,54 @@ export default class OpenFilePlg extends Plugin {
 	async doSaveSettingConfig() {
 		await this.saveData(this.settingConfig);
 	}
+
 	async onload() {
 		await this.doLoadSettingConfig();
-
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, abstractFile, source) => {
+				menu.addSeparator();
+				menu.addItem((mi) => {
+					mi.setTitle("Open in other editor").onClick(
+						clickHandler.bind(this)
+					);
+				});
+				function clickHandler(e: MouseEvent) {
+					console.log({ e, t: 33 });
+					if (this.settingConfig.vscode_path)
+						this.open("code", { curFilePath: abstractFile.path });
+				}
+				menu.addSeparator();
+			})
+		);
+		this.registerEvent(
+			this.app.workspace.on(
+				"files-menu",
+				(menu: Menu, abstractFile: any, source: any) => {
+					menu.addSeparator()
+						.addItem((mi: MenuItem) => {
+							mi.setTitle("Open in other editor").onClick(
+								clickHandler.bind(this)
+							);
+						})
+						.addSeparator();
+					function clickHandler(e: MouseEvent) {
+						if (
+							this.settingConfig.vscode_path &&
+							Array.isArray(abstractFile)
+						) {
+							return abstractFile.forEach((af) => {
+								this.open("code", {
+									curFilePath: af.path,
+								});
+							});
+						}
+						this.open("code", {
+							curFilePath: abstractFile.path,
+						});
+					}
+				}
+			)
+		);
 		this.addCommand({
 			id: "open-in-other-editor-gvim",
 			name: "Open current active file in gVim",
@@ -91,8 +144,16 @@ export default class OpenFilePlg extends Plugin {
 
 	onunload() {}
 
-	private open(by: EditorName) {
-		let curFilePath = this.app.workspace.getActiveFile()?.path;
+	private open(
+		by: EditorName,
+		overrideConfig?: {
+			curFilePath?: string;
+		}
+	) {
+		const { curFilePath } = {
+			curFilePath: this.app.workspace.getActiveFile()?.path,
+			...overrideConfig,
+		};
 		if (!curFilePath) {
 			console.warn("no active file in workspace");
 			return;
@@ -117,12 +178,11 @@ export default class OpenFilePlg extends Plugin {
 		}
 	}
 
-	macopen(basePath: string, curFilePath: string, by: string) {
+	private macopen(basePath: string, curFilePath: string, by: string): void {
 		const {
 			path: { join },
 		} = this.app.vault.adapter as AdapterPlus;
 		const derived_path = join(basePath, curFilePath);
-
 		void (async function (
 			file: string,
 			app: App & {
@@ -137,16 +197,18 @@ export default class OpenFilePlg extends Plugin {
 					7000
 				);
 			}
+
 			const { err, access } = await app.vault.adapter.fsPromises
 				.stat(file)
 				.then((access: any) => ({ access, err: null }))
 				.catch((err: Error) => {
 					return {
 						err,
+						stat: null,
 					};
 				});
-			if (err) {
-				return console.log({ err });
+			if (err && !access) {
+				return console.log({ err, access });
 			}
 			await execa(file, [derived_path]);
 		})(by, this.app);
