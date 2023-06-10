@@ -1,6 +1,6 @@
 import { DataAdapter, Plugin, Notice, App, Vault } from "obsidian";
 import * as os from "os";
-import { spawn, exec } from "child_process";
+import { spawn } from "child_process";
 import { OpenFilePlgSettingTab } from "./components/OpenFilePlgSettingTab";
 
 type EditorName = "gvim" | "code";
@@ -59,14 +59,34 @@ export default class OpenFilePlg extends Plugin {
 		gvim_path: "",
 	};
 
-	doLoadSettingConfig() {
-		this.settingConfig = { ...this.settingConfig, ...this.loadData() };
+	async doLoadSettingConfig() {
+		const data = await this.loadData();
+		this.settingConfig = { ...this.settingConfig, ...data };
 	}
-	doSaveSettingConfig() {
-		this.saveData(this.settingConfig);
+	async doSaveSettingConfig() {
+		this.saveData({ ...this.settingConfig });
 	}
 	async onload() {
 		await this.doSaveSettingConfig();
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, abstractFile, source) => {
+				menu.addItem((mi) => {
+					console.log(this.settingConfig);
+					mi.setTitle("Open in other editor").onClick(
+						clickHandler.bind(this)
+					);
+				});
+				function clickHandler() {
+					const { basePath } = this.app.vault.adapter as AdapterPlus;
+					if (this.settingConfig.vscode_path)
+						this.macopen(
+							basePath,
+							abstractFile.path,
+							this.settingConfig.vscode_path
+						);
+				}
+			})
+		);
 
 		this.addCommand({
 			id: "open-in-other-editor-gvim",
@@ -114,12 +134,12 @@ export default class OpenFilePlg extends Plugin {
 		}
 	}
 
-	macopen(basePath: string, curFilePath: string, by: string) {
+	private macopen(basePath: string, curFilePath: string, by: string): void {
 		const {
 			path: { join },
 		} = this.app.vault.adapter as AdapterPlus;
 		const derived_path = join(basePath, curFilePath);
-
+		console.log({ derived_path });
 		void (async function (
 			file: string,
 			app: App & {
@@ -140,10 +160,11 @@ export default class OpenFilePlg extends Plugin {
 				.catch((err: Error) => {
 					return {
 						err,
+						stat: null,
 					};
 				});
-			if (err) {
-				return console.log({ err });
+			if (err && !access) {
+				return console.log({ err, access });
 			}
 			await execa(file, [derived_path]);
 		})(by, this.app);
