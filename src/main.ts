@@ -1,4 +1,12 @@
-import { DataAdapter, Plugin, Notice, App, Vault } from "obsidian";
+import {
+	DataAdapter,
+	Plugin,
+	Notice,
+	App,
+	Vault,
+	MenuItem,
+	Menu,
+} from "obsidian";
 import * as os from "os";
 import { spawn } from "child_process";
 import { OpenFilePlgSettingTab } from "./components/OpenFilePlgSettingTab";
@@ -76,14 +84,43 @@ export default class OpenFilePlg extends Plugin {
 						clickHandler.bind(this)
 					);
 				});
-				function clickHandler() {
+				function clickHandler(e: MouseEvent) {
+					console.log({ e, t: 33 });
 					if (this.settingConfig.vscode_path)
 						this.open("code", { curFilePath: abstractFile.path });
 				}
 				menu.addSeparator();
 			})
 		);
-
+		this.registerEvent(
+			this.app.workspace.on(
+				"files-menu",
+				(menu: Menu, abstractFile: any, source: any) => {
+					menu.addSeparator()
+						.addItem((mi: MenuItem) => {
+							mi.setTitle("Open in other editor").onClick(
+								clickHandler.bind(this)
+							);
+						})
+						.addSeparator();
+					function clickHandler(e: MouseEvent) {
+						if (
+							this.settingConfig.vscode_path &&
+							Array.isArray(abstractFile)
+						) {
+							return abstractFile.forEach((af) => {
+								this.open("code", {
+									curFilePath: af.path,
+								});
+							});
+						}
+						this.open("code", {
+							curFilePath: abstractFile.path,
+						});
+					}
+				}
+			)
+		);
 		this.addCommand({
 			id: "open-in-other-editor-gvim",
 			name: "Open current active file in gVim",
@@ -157,6 +194,7 @@ export default class OpenFilePlg extends Plugin {
 					7000
 				);
 			}
+
 			const { err, access } = await app.vault.adapter.fsPromises
 				.stat(file)
 				.then((access: any) => ({ access, err: null }))
