@@ -88,9 +88,15 @@ export default class OpenFilePlg extends Plugin {
 					);
 				});
 				function clickHandler(e: MouseEvent) {
-					console.log({ e, t: 33 });
-					if (this.settingConfig.vscode_path)
-						this.open("code", { curFilePath: abstractFile.path });
+					if (this.settingConfig.vscode_path) {
+						return this.open("code", {
+							curFilePath: abstractFile.path,
+						});
+					}
+					new Notice(
+						"Please save vscode editor path in settings.",
+						5000
+					);
 				}
 				menu.addSeparator();
 			})
@@ -155,8 +161,7 @@ export default class OpenFilePlg extends Plugin {
 			...overrideConfig,
 		};
 		if (!curFilePath) {
-			console.warn("no active file in workspace");
-			return;
+			return new Notice("no active file in workspace", 6000);
 		}
 		let cwd = this.app.vault.adapter.getResourcePath(".");
 		const { adapter } = this.app.vault;
